@@ -1,0 +1,40 @@
+name: Update Stats
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch stats
+        run: |
+          curl -s https://api.github.com/repos/alibaba/page-agent \
+            | jq '{
+                stargazers_count: .stargazers_count,
+                forks_count: .forks_count,
+                updated_at: (now | todate)
+              }' > stats.json
+          cat stats.json
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - uses: actions/deploy-pages@v4
+        id: deploy
